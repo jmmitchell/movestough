@@ -511,7 +511,7 @@ if [ "${full_list_count}" -gt "0" ]; then
             # ⬆ close of out-err-rtn capture fu
     
             if [ "${cmd_ret}" -eq "0" ]; then
-                logger "${bits}\t\"${SOURCEPATH}${path}\"\t\"${DESTINATIONPATH}${path}\""
+                logger "${bits}"$'\t'"\"${SOURCEPATH}${path}\""$'\t'"\"${DESTINATIONPATH}${path}\""
                 # level 2 verbose message, sent to file descriptor 4
                 printf -- "Changes (%s) were replcated from (%s) to the destination.\n" "${bits}" "${SOURCEPATH}${path}" >&4
     
@@ -521,7 +521,7 @@ if [ "${full_list_count}" -gt "0" ]; then
                 let change_count+="1"
                 ownership_changes="1"
             else
-                logger "*warning***\tFailed to replicate changes (${bits}) from (${SOURCEPATH}${path}) to the destination. [${cmd_ret} : ${cmd_err}]"
+                logger "*warning***"$'\t'"Failed to replicate changes (${bits}) from (${SOURCEPATH}${path}) to the destination. [${cmd_ret} : ${cmd_err}]"
                 # level 2 verbose message, sent to file descriptor 4
                 printf -- "Warning: failed to replicate changes (%s) from (%s) to the destination. [%s : %s]\n" "${bits}" "${SOURCEPATH}${path}" "${cmd_ret}" "${cmd_err}" >&4
             fi
@@ -574,14 +574,14 @@ if [ "${full_list_count}" -gt "0" ]; then
             # ⬆ close of out-err-rtn capture fu
 
             if [ "${cmd_ret}" -eq "0" ]; then
-                logger ">f+++++++++\t\"${SOURCEPATH}${path}\"\t\"${DESTINATIONPATH}${path}\""
+                logger ">f+++++++++"$'\t'"\"${SOURCEPATH}${path}\""$'\t'"\"${DESTINATIONPATH}${path}\""
                 # level 2 verbose message, sent to file descriptor 4
                 printf -- "File (%s) was moved from source to destination directory.\n" "${path}" >&4
 
                 let change_count+="1"
                 ownership_changes="1"
             else
-                logger "*warning***\tfailed to move file (${SOURCEPATH}${path}) to the destination. [${cmd_ret} : ${cmd_err}]"
+                logger "*warning***"$'\t'"failed to move file (${SOURCEPATH}${path}) to the destination. [${cmd_ret} : ${cmd_err}]"
                 # level 2 verbose message, sent to file descriptor 4
                 printf -- "Warning: File (%s) failed to move from source to destination directory. [%s : %s]\n" "${path}" "${cmd_ret}" "${cmd_err}" >&4
             fi
@@ -629,7 +629,7 @@ if [ "${full_list_count}" -gt "0" ]; then
             # ⬆ close of out-err-rtn capture fu
 
             if [ "${cmd_ret}" -eq "0" ]; then
-                logger "${bits}\t\"${SOURCEPATH}${path}\"\t\"${DESTINATIONPATH}${unique_path}\""
+                logger "${bits}"$'\t'"\"${SOURCEPATH}${path}\""$'\t'"\"${DESTINATIONPATH}${unique_path}\""
                 # level 2 verbose message, sent to file descriptor 4
                 printf -- "File (%s) was moved from source to destination directory with deconflicted name (%s).\n" "${SOURCEPATH}${path}" "${SOURCEPATH}${unique_path}" >&4
 
@@ -640,7 +640,7 @@ if [ "${full_list_count}" -gt "0" ]; then
                 ownership_changes="1"
 
             else
-                logger "*warning***\tFailed to move file (${SOURCEPATH}${path}) to destination directory with deconflicted name (${SOURCEPATH}${unique_path}). [${cmd_ret} : ${cmd_err}]"
+                logger "*warning***"$'\t'"Failed to move file (${SOURCEPATH}${path}) to destination directory with deconflicted name (${SOURCEPATH}${unique_path}). [${cmd_ret} : ${cmd_err}]"
                 # level 2 verbose message, sent to file descriptor 4
                 printf -- "Warning: failed to move file (%s) to destination directory with deconflicted name (%s). [%s : %s]\n" "${SOURCEPATH}${path}" "${SOURCEPATH}${unique_path}" "${cmd_ret}" "${cmd_err}" >&4
             fi
@@ -701,7 +701,7 @@ if [ "${full_list_count}" -gt "0" ]; then
                 # ⬆ close of out-err-rtn capture fu
 
                 if [ "${cmd_ret}" -eq "0" ]; then
-                    logger "${bits}\t\"${SOURCEPATH}${path}\"\t\"${DESTINATIONPATH}${path}\""
+                    logger "${bits}"$'\t'"\"${SOURCEPATH}${path}\""$'\t'"\"${DESTINATIONPATH}${path}\""
                     # level 2 verbose message, sent to file descriptor 4
                     printf -- "File (%s) was a confirmed duplicate via checksum, so it was deleted from the source directory.\n" "${SOURCEPATH}${path}" >&4
 
@@ -711,7 +711,7 @@ if [ "${full_list_count}" -gt "0" ]; then
                     let change_count+="1"
                     ownership_changes="1"
                 else
-                    logger "*warning***\tFile (${SOURCEPATH}${path}) was confirmed duplicate via checksum; attempts to delete file from source directory have failed. [${cmd_ret} : ${cmd_err}]"
+                    logger "*warning***"$'\t'"File (${SOURCEPATH}${path}) was confirmed duplicate via checksum; attempts to delete file from source directory have failed. [${cmd_ret} : ${cmd_err}]"
                     # level 2 verbose message, sent to file descriptor 4
                     printf -- "Warning: File (%s) was confirmed duplicate via checksum; attempts to delete file from source directory have failed. [%s : %s]\n" "${SOURCEPATH}${path}" "${cmd_ret}" "${cmd_err}" >&4
                 fi
@@ -735,7 +735,7 @@ if [ "${full_list_count}" -gt "0" ]; then
                 # ⬆ close of out-err-rtn capture fu
 
                 if [ "${cmd_ret}" -eq "0" ]; then
-                    logger "${bits}\t\"${SOURCEPATH}${path}\"\t\"${DESTINATIONPATH}${unique_path}\""
+                    logger "${bits}"$'\t'"\"${SOURCEPATH}${path}\""$'\t'"\"${DESTINATIONPATH}${unique_path}\""
                     # level 2 verbose message, sent to file descriptor 4
                     printf -- "File (%s) was suspected a duplicate but instead was confirmed CHANGED, so it was moved from source to destination directory with deconflicted name (%s).\n" "${SOURCEPATH}${path}" "${SOURCEPATH}${unique_path}" >&4
                     
@@ -745,7 +745,7 @@ if [ "${full_list_count}" -gt "0" ]; then
                     let change_count+="1"
                     ownership_changes="1"
                 else
-                    logger "*warning***\tFile (${SOURCEPATH}${path}) was suspected a duplicate but instead was confirmed CHANGED; failed to move it to the destination directory with deconflicted name (${SOURCEPATH}${unique_path}). [${cmd_ret} : ${cmd_err}]"
+                    logger "*warning***"$'\t'"File (${SOURCEPATH}${path}) was suspected a duplicate but instead was confirmed CHANGED; failed to move it to the destination directory with deconflicted name (${SOURCEPATH}${unique_path}). [${cmd_ret} : ${cmd_err}]"
                     # level 2 verbose message, sent to file descriptor 4
                     printf -- "Warning: File (%s) was confirmed duplicate via checksum; failed to move it to the destination directory with deconflicted name (%s). [%s : %s]\n" "${SOURCEPATH}${path}" "${SOURCEPATH}${unique_path}" "${cmd_ret}" "${cmd_err}" >&4
                 fi          
@@ -814,14 +814,14 @@ while IFS= read -r -d $'\0' line; do
         # ⬆ close of out-err-rtn capture fu
         
         if [ "${cmd_ret}" -eq "0" ]; then
-            logger "*deleting**\t\"${SOURCEPATH}${path}\""
+            logger "*deleting**"$'\t'"\"${SOURCEPATH}${path}\""
             # level 2 verbose message, sent to file descriptor 4
             printf -- "Directory (%s) was deleted from the source directory.\n" "${match_dir}">&4
 
             let change_count+="1"
             let dir_cleanup_count+="1"
         else
-            logger "*warning***\tfailed to delete directory (${SOURCEPATH}${match_dir}) from source directory. [${cmd_ret} : ${cmd_err}]"
+            logger "*warning***"$'\t'"failed to delete directory (${SOURCEPATH}${match_dir}) from source directory. [${cmd_ret} : ${cmd_err}]"
             # level 1 verbose message, sent to file descriptor 3
             printf -- "Attempted to delete directory (%s) but failed to do so. [%s : %s]\n" "${match_dir}" "${cmd_ret}" "${cmd_err}" >&3
         fi
@@ -843,7 +843,7 @@ printf -- "\n  Done processing (%s) stale directories.\n" "${dir_cleanup_count}"
 # The details:
 # 1. If rsync 3.1.0+ were available we could use the --chown flag, but since
 #    it cannot be counted upon, a more structured aproach will be taken. Thus,
-#    the iterative use of chown as prescribed by in the permissions file. The
+#    the iterative use of chown as prescribed by in the ownership file. The
 #    ownership file is set via the flag --ownership (of -o for short).
 # 2. The chown commands are only needed if files were moved by rsync therefore
 #    the if statement, which checks to see if the change_count is greater than

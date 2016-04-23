@@ -187,6 +187,7 @@ If you expect to use the script for an extended period of time, consider using `
 - implement check on success of rsync when creating the checksum_match
 - add some checking for minimum versions of bash, rsync, etc.; once discovered, this should also be added to the documentation as well
 - implement an internal log of files or directory changes and narrow the use of chown to only those
+- consider the use of `trap` to ensure consistent state when forced to exit
 - for efficiency, the structure changes loop should ignore owner and group differences because we very well might be enforcing the variance; this manifest itself when directories are not in the scaffolding to keep but have yet to be marked as stale
 - consider use of echo -n or <<< to suppress newlines or eliminate piped sed
 - verify quoted vars in all if statements
