@@ -774,7 +774,10 @@ fi
 #    older than 15 minutes. The 15 minute grace period is intended to allow 
 #    people time to create a directory and move files to it without it being
 #    deleted out from under them. The default age of 15 minutes can be
-#    changed via the --minutes-until-stale (or -ms for short).
+#    changed via the --minutes-until-stale (or -ms for short). The -print0 arg
+#    is used with find to ensure that paths with newlines in them, though rare,
+#    will be handled correctly.
+#    their name are handled correctl
 # 2. The directories found are redirected to a while loop for individual
 #    processing.
 # 3. $dirs_to_preserve is populated above from the config file indicated via
@@ -799,35 +802,38 @@ dir_cleanup_count="0" # nothing yet
 
 # using process substitution, feed the find stout to while's stdin
 while IFS= read -r -d $'\0' line; do
-    # if there is not a trailing slash, add one via some bash fu
-    match_dir="${line}$( printf \\$( printf '%03o' $(( $(printf '%d' "'${line:(-1)}") == 47 ? 0 : 47 )) ) )"
-
-    # Check to see if the dirs_to_preserve was populated. If so, verify that
-    # match_dir is not listed in dirs_to_preserve
-    if [ -n "${dirs_to_preserve}" ] &&  !  grep -xq "${match_dir}" <<< "${dirs_to_preserve}"; then
-
-        # via some bash fu, capture stdout, sterr and return code for rsync
-        # ⬇ start of out-err-rtn capture fu
-        eval "$({ cmd_err=$({ cmd_out="$( \
-            rmdir "${line}" 2> /dev/null \
-          )"; cmd_ret=$?; } 2>&1; declare -p cmd_out cmd_ret >&2); declare -p cmd_err; } 2>&1)"
-        # ⬆ close of out-err-rtn capture fu
-        
-        if [ "${cmd_ret}" -eq "0" ]; then
-            logger "*deleting**"$'\t'"\"${SOURCEPATH}${path}\""
-            # level 2 verbose message, sent to file descriptor 4
-            printf -- "Directory (%s) was deleted from the source directory.\n" "${match_dir}">&4
-
-            let change_count+="1"
-            let dir_cleanup_count+="1"
+    # skip over an exact match SOURCEPATH thus preserving it.
+    if [[ "${line}" != "${SOURCEPATH}" ]]; then 
+        # if there is not a trailing slash, add one via some bash fu
+        match_dir="${line}$( printf \\$( printf '%03o' $(( $(printf '%d' "'${line:(-1)}") == 47 ? 0 : 47 )) ) )"
+    
+        # Check to see if the dirs_to_preserve was populated. If so, verify that
+        # match_dir is not listed in dirs_to_preserve
+        if [ -n "${dirs_to_preserve}" ] &&  !  grep -xq "${match_dir}" <<< "${dirs_to_preserve}"; then
+    
+            # via some bash fu, capture stdout, sterr and return code for rsync
+            # ⬇ start of out-err-rtn capture fu
+            eval "$({ cmd_err=$({ cmd_out="$( \
+                rmdir "${line}" 2> /dev/null \
+              )"; cmd_ret=$?; } 2>&1; declare -p cmd_out cmd_ret >&2); declare -p cmd_err; } 2>&1)"
+            # ⬆ close of out-err-rtn capture fu
+            
+            if [ "${cmd_ret}" -eq "0" ]; then
+                logger "*deleting**"$'\t'"\"${SOURCEPATH}${path}\""
+                # level 2 verbose message, sent to file descriptor 4
+                printf -- "Directory (%s) was deleted from the source directory.\n" "${match_dir}">&4
+    
+                let change_count+="1"
+                let dir_cleanup_count+="1"
+            else
+                logger "*warning***"$'\t'"failed to delete directory (${SOURCEPATH}${match_dir}) from source directory. [${cmd_ret} : ${cmd_err}]"
+                # level 1 verbose message, sent to file descriptor 3
+                printf -- "Attempted to delete directory (%s) but failed to do so. [%s : %s]\n" "${match_dir}" "${cmd_ret}" "${cmd_err}" >&3
+            fi
         else
-            logger "*warning***"$'\t'"failed to delete directory (${SOURCEPATH}${match_dir}) from source directory. [${cmd_ret} : ${cmd_err}]"
-            # level 1 verbose message, sent to file descriptor 3
-            printf -- "Attempted to delete directory (%s) but failed to do so. [%s : %s]\n" "${match_dir}" "${cmd_ret}" "${cmd_err}" >&3
+            # level 2 verbose message, sent to file descriptor 4
+            printf -- "Directory (%s) is stale but was preserved in the source directory.\n" "${match_dir}" >&4
         fi
-    else
-        # level 2 verbose message, sent to file descriptor 4
-        printf -- "Directory (%s) is stale but was preserved in the source directory.\n" "${match_dir}" >&4
     fi
 done < <(find "${SOURCEPATH}" -type d -cmin "+${MINSUNTILSTALE}" -print0)
 

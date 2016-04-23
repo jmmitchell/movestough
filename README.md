@@ -163,6 +163,7 @@ If you expect to use the script for an extended period of time, consider using `
 
 ##History
 **changelog:**  
+ 2016-04-23 just in case it was not specified in a via a --preserve config file, force the source directory to be preserved during the stale directory clean up process  
  2016-04-23 updated docs and comments to prepare for github  
  2016-04-18 changed verbose output from notify function to use file descriptors (allows safe handling of all chars in output)  
  2016-04-17 fixed use of vars in printf statements; example: printf "Hello, %s\n" "$NAME"  
