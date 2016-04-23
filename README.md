@@ -163,9 +163,9 @@ If you expect to use the script for an extended period of time, consider using `
 
 ##History
 **changelog:**  
- 2016-04-23 updated docs and comments to prepare for github
- 2016-04-18 changed verbose output from notify function to use file descriptors (allows safe handling of all chars in output)
- 2016-04-17 fixed use of vars in printf statements; example: printf "Hello, %s\n" "$NAME"
+ 2016-04-23 updated docs and comments to prepare for github  
+ 2016-04-18 changed verbose output from notify function to use file descriptors (allows safe handling of all chars in output)  
+ 2016-04-17 fixed use of vars in printf statements; example: printf "Hello, %s\n" "$NAME"  
  2016-04-16 standardized log file output mimicking rsync bit flag output  
  2015-04-15 added cmd_out, cmd_err, cmd_rtn fu to each rsync, mv, rmdir  
  2016-04-10 fixed nasty bug in stale dir check introduced by file checks  
