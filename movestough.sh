@@ -35,7 +35,7 @@
 # a target directory, on the same filesystem, via fail-safe handling.
 #
 # For more background information, usage suggestions and the latest version of
-# this script, please visit: https://github.com/jmmitchell
+# this script, please visit: https://github.com/jmmitchell/movestough
 #
 #
 # What it not intended for:
@@ -347,13 +347,14 @@ done
 # if verbose output was triggered, list out the args
 if [[ "${VERBOSELEVEL}" > "${VERBOSITYMIN}" ]]; then
     printf -- 'Verbose mode was triggered...\n'
-    printf -- '   Verbose = %s\n' "${VERBOSELEVEL}"
-    printf -- '   Source Path = %s\n' "${SOURCEPATH}"
-    printf -- '   Destination Path = %s\n' "${DESTINATIONPATH}"
-    printf -- '   Directories to Preserve File = %s\n' "${DIRSTOPRESERVEFILE}"
-    printf -- '   Log File = %s\n' "${LOGFILE}"
-    printf -- '   Ownership File = %s\n' "${OWNERSHIPFILE}"
-    printf -- '   Minutes Until Directories Are Stale = %s\n\n' "${MINSUNTILSTALE}"
+    printf -- '   Verbose Level = %s\n' "${VERBOSELEVEL:- < none >}"
+    printf -- '   Source Path = %s\n' "${SOURCEPATH:- < none >}"
+    printf -- '   Destination Path = %s\n' "${DESTINATIONPATH:- < none >}"
+    printf -- '   Directories to Preserve Config = %s\n' "${DIRSTOPRESERVEFILE:- < none >}"
+    printf -- '   Log File = %s\n' "${LOGFILE:- < none >}"
+    printf -- '   Ownership Config = %s\n' "${OWNERSHIPFILE:- < none >}"
+    printf -- '   Minutes Until Directories Are Stale = %s\n\n' "${MINSUNTILSTALE:- < none >}"
+    printf -- '   Deconflict Files With Uniqueness Style Number = %s\n\n' --unique-style "${UNIQUESTYLE:- < none >}"
 fi
 
 #
