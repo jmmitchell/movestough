@@ -8,8 +8,7 @@
 The primary function of this script is to move files from a source directory to a target directory, on the same filesystem, via fail-safe handling.
 
 **Strengths over alternative options:**  
-This script is intended to provide fine-grained handling when moving filesystem contents as compared to other alternatives, like rsync or mv alone. While there may be faster or less complicated ways to move files, this script has been specifically crafted to err on the side of data preservation and tracking every create/update/delete action in a timestamped log. For instance, this means that files should never be overwritten; sameness is verified by checksum 
-of the file; directories that are marked for deletion will fail to be deleted if they, for unforeseen reasons, are not empty.
+This script is intended to provide fine-grained handling when moving filesystem contents as compared to other alternatives, like rsync or mv alone. While there may be faster or less complicated ways to move files, this script has been specifically crafted to err on the side of data preservation and tracking every create/update/delete action in a timestamped log. For instance, this means that files should never be overwritten; sameness is verified by checksum of the file; directories that are marked for deletion will fail to be deleted if they, for unforeseen reasons, are not empty.
 
 For those more familiar with linux cli handiwork, think of this script as the best of rsync, find, mv, mkdir and rmdir rolled into one.
 
@@ -129,21 +128,18 @@ An example of how the script might be typically used:
 		-v=2 \
 		-u=1
 
-**Cron** 
+**Cron**  
 To run the script in an automated, unattended manor, the preferred method is via `cron`. 
 First, if you are unfamilar with `cron`, [read the cron man page](http://linux.die.net/man/5/crontab). It is important to use `flock` when running this script from a crontab. More details on `flock` can be found on its [the flock man page](http://linux.die.net/man/2/flock).
 This allows the script to be executed often but keeps the system from having
-simultaneous copies of the script running. Not only is this resource (CPU, 
-RAM) friendly, this eliminates race conditions and other nasty unintended
-side effects.
+simultaneous copies of the script running. Not only is this resource (CPU, RAM) friendly, this eliminates race conditions and other nasty unintendedside effects.
 
 With that said, a suggest crontab entry to run the script every
 3 minutes would look something like:
 
 	*/3 * * * * /usr/bin/flock -w 0 -n /Dropbox/Scripts/movestough-pictures.lock /Dropbox/Scripts/movestough.sh  -s=/Dropbox/Move\ to\ ReadyNAS/Pictures/ -d=/media/Pictures/~dropbox\ -\ to\ be\ sorted/ -p=/Dropbox/Scripts/movestough-pictures-scaffolding.conf -o=/Dropbox/Scripts/movestough-pictures-permissions.conf -l=/Dropbox/Scripts/movestough-pictures.log*/2 * * * * flock -w 0 -n /some/path/script.lock /some/path/script.sh ...
 
-You will need to specify additional required flags like -s -d and maybe even
-consider some optional but common flags, like -s or -p for the example above.
+You will need to specify additional required flags like -s -d and maybe even consider some optional but common flags, like -s or -p for the example above.
 
 If you expect to use the script for an extended period of time, consider using `logrotate` to manage your logs so they grow indefinitely. If you are unfamiliar with `logrotate`, [read the logrotate man page](http://linux.die.net/man/8/logrotate). An config for `logrotate` might look something like: 
 
