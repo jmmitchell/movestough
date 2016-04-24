@@ -128,7 +128,32 @@
 function make_filename_unique {
     # were were passed anything
     if [ -n "$1" ]; then
-        echo "${1}-deconflicted-$(date  +"%Y-%m-%d-%H-%M-%S-%N")"
+        local unique_string="deconflicted-$(date +"%Y-%m-%d-%H-%M-%S-%N")"
+        # get the file name part of the filepath
+        local filename="$(basename "$1")"
+        # get the directory path part of the filepath
+        local path="$(dirname "$1")/"
+
+        if [[ "${UNIQUESTYLE}" -eq "1" ]]; then
+            # shortest extension; insert string before
+            # Get the root name of $filename, taking the last occurence of . as
+            # the end of the name. In other words, remove the shortest possible
+            # match of .* from the end of $filename.
+            local rootname="${filename%.*}"
+            local ext="${filename##*.}"
+            printf -- "%s.%s.%s" "${path}${rootname}" "${unique_string}" "${ext}"
+        elif [[ "${UNIQUESTYLE}" -eq "2" ]]; then
+            # longest extension; insert string before
+            # Get the root name of $filename, taking the first occurence of .
+            # as the end of the name. In other words, remove the longest
+            # possible match of .* from the end of $filename.
+            local rootname="${filename%%.*}"
+            local ext="${filename#*.}"
+            printf -- "%s.%s.%s" "${path}${rootname}" "${unique_string}" "${ext}"
+        else
+            # append the string at the end
+            printf -- "%s-%s" "${1}" "${unique_string}"
+        fi
     else
         echo ""
     fi
@@ -204,7 +229,7 @@ for opt in "$@"; do
         if [[ "${opt#*=}" =~ ^[1-3]$ ]]; then
             let VERBOSELEVEL+="${opt#*=}"
         fi
-        make sure the arg was not parsed twice and resulting in gt VERBOSITYMAX
+        # make sure the arg was not parsed twice and resulting in gt VERBOSITYMAX
         if [[ "${VERBOSELEVEL}" > "${VERBOSITYMAX}" ]]; then
             VERBOSELEVEL="${VERBOSITYMAX}"
         fi
@@ -276,6 +301,12 @@ for opt in "$@"; do
         if [[ ( -e "${LOGFILE}" || $(touch "${LOGFILE}") ) && ! -w "${LOGFILE}" ]]; then
             printf -- '\n%s : either the file does not exist or is not readable. Check that the path is correct and that permissions are set correctly.\n' "${opt}"
             exit_now="1"
+        fi
+        shift # past argument=value
+        ;;
+       -u=*|--unique-style=*)
+        if [[ "${opt#*=}" =~ ^[0-2]+$ ]]; then
+            UNIQUESTYLE="${opt#*=}"
         fi
         shift # past argument=value
         ;;
@@ -633,7 +664,7 @@ if [ "${full_list_count}" -gt "0" ]; then
                 # level 2 verbose message, sent to file descriptor 4
                 printf -- "File (%s) was moved from source to destination directory with deconflicted name (%s).\n" "${SOURCEPATH}${path}" "${SOURCEPATH}${unique_path}" >&4
 
-                offending_files_actual="${offending_files_actual}${path}\n"
+                offending_files_actual="${offending_files_actual}${path}"$'\n'
                 let offending_files_actual_count+="1" 
 
                 let change_count+="1"
@@ -705,7 +736,7 @@ if [ "${full_list_count}" -gt "0" ]; then
                     # level 2 verbose message, sent to file descriptor 4
                     printf -- "File (%s) was a confirmed duplicate via checksum, so it was deleted from the source directory.\n" "${SOURCEPATH}${path}" >&4
 
-                    same_files_actual="${same_files_actual}${path}\n"
+                    same_files_actual="${same_files_actual}${path}"$'\n'
                     let same_files_actual_count+="1"
 
                     let change_count+="1"
@@ -721,7 +752,6 @@ if [ "${full_list_count}" -gt "0" ]; then
             # source file, the source file is a different file, despite its
             # name being the same. To safely move the file, make the filename
             # unique, then move the file.
-
                 unique_path=$(make_filename_unique "${path}")
 
                 # move the file while renaming it to its new unique name
@@ -739,7 +769,7 @@ if [ "${full_list_count}" -gt "0" ]; then
                     # level 2 verbose message, sent to file descriptor 4
                     printf -- "File (%s) was suspected a duplicate but instead was confirmed CHANGED, so it was moved from source to destination directory with deconflicted name (%s).\n" "${SOURCEPATH}${path}" "${SOURCEPATH}${unique_path}" >&4
                     
-                    same_files_actual="${same_files_actual}${path}\n"
+                    same_files_actual="${same_files_actual}${path}"$'\n'
                     let same_files_actual_count+="1"
 
                     let change_count+="1"
@@ -755,7 +785,7 @@ if [ "${full_list_count}" -gt "0" ]; then
             unset cmd_out
             unset cmd_err
             unset cmd_ret
-        done <<< "${structure_changes}"
+        done <<< "${same_files}"
         unset IFS
 
         # level 1 verbose message, sent to file descriptor 3
