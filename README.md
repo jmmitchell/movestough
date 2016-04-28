@@ -1,7 +1,7 @@
 # movestough.sh
 
 
-**tl;dr: Move files in a source directory to a target directory without loss, then clean up the source directory as needed.**  
+**tl;dr: Bash script to monitor a source directory and move any added objects to a target directory, ensuring via fail-safe handling of data and then clean up the source directory as directed. Log all actions.**  
 
 
 ## Intended Use  
@@ -157,6 +157,10 @@ If you expect to use the script for an extended period of time, consider using `
 
 ##History
 **changelog:**  
+ 2016-04-27 fixed error where `--ownership` was assumed active even if it was not specified
+ 2016-04-27 cleaned up verbose cli output for file collisions
+ 2016-04-26 fixed error where `--preserve` was assumed active even if it was not specified
+ 2016-05-25 corrected verbose output messages for 
  2016-04-24 improved make\_filename\_unique allowing a style number to be specified via a `-unique-style=` (or `-u=` for short) flag  
   2016-04-23 just in case it was not specified in a via a `--preserve=` (or `-p` for short) config file, the source directory is preserved during the stale directory clean up process  
  2016-04-23 updated docs and comments to prepare for github  
@@ -180,6 +184,8 @@ If you expect to use the script for an extended period of time, consider using `
 
 **backlog in no particular order:**  
 
+- add checks to file name deconflicting function for handling files that don't have an period or extension
+- fix display of verbose level # on interactive run
 - create a help function triggered by checking and `--help` or `-?` 
 - implement check on success of rsync when creating the checksum_match
 - add some checking for dependencies and minimum versions of bash, rsync, etc.; once discovered, this should also be added to the documentation as well in the dependencies section of the README
