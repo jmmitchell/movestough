@@ -141,7 +141,10 @@ function make_filename_unique {
             # match of .* from the end of $filename.
             local rootname="${filename%.*}"
             local ext="${filename##*.}"
-            printf -- "%s.%s.%s" "${path}${rootname}" "${unique_string}" "${ext}"
+            if [ -n "${ext}" ]; then
+                ext=".${ext}"
+            fi
+            printf -- "%s.%s" "${path}${rootname}" "${unique_string}${ext}"
         elif [[ "${UNIQUESTYLE}" -eq "2" ]]; then
             # longest extension; insert string before
             # Get the root name of $filename, taking the first occurence of .
@@ -149,7 +152,10 @@ function make_filename_unique {
             # possible match of .* from the end of $filename.
             local rootname="${filename%%.*}"
             local ext="${filename#*.}"
-            printf -- "%s.%s.%s" "${path}${rootname}" "${unique_string}" "${ext}"
+            if [ -n "${ext}" ]; then
+                ext=".${ext}"
+            fi
+            printf -- "%s.%s" "${path}${rootname}" "${unique_string}${ext}"
         else
             # append the string at the end
             printf -- "%s-%s" "${1}" "${unique_string}"
@@ -347,14 +353,14 @@ done
 # if verbose output was triggered, list out the args
 if [[ "${VERBOSELEVEL}" > "${VERBOSITYMIN}" ]]; then
     printf -- 'Verbose mode was triggered...\n'
-    printf -- '   Verbose Level = %s\n' "${VERBOSELEVEL:- < none >}"
+    printf -- '   Verbose Level = %s\n' "$(( ${VERBOSELEVEL} - ${VERBOSITYMIN} ))"
     printf -- '   Source Path = %s\n' "${SOURCEPATH:- < none >}"
     printf -- '   Destination Path = %s\n' "${DESTINATIONPATH:- < none >}"
     printf -- '   Directories to Preserve Config = %s\n' "${DIRSTOPRESERVEFILE:- < none >}"
     printf -- '   Log File = %s\n' "${LOGFILE:- < none >}"
     printf -- '   Ownership Config = %s\n' "${OWNERSHIPFILE:- < none >}"
-    printf -- '   Minutes Until Directories Are Stale = %s\n\n' "${MINSUNTILSTALE:- < none >}"
-    printf -- '   Deconflict Files With Uniqueness Style Number = %s\n\n' --unique-style "${UNIQUESTYLE:- < none >}"
+    printf -- '   Minutes Until Directories Are Stale = %s\n' "${MINSUNTILSTALE:- < none >}"
+    printf -- '   Deconflict Files With Style Number = %s\n\n' "${UNIQUESTYLE:- < none >}"
 fi
 
 #
@@ -391,38 +397,26 @@ fi
 #    directory when compared to the target directory. The bit flags produced by
 #    rsync's itemized changes are parsed to determine required actions.
 #    ------------------------------------------------------
-#    For reference, example output of rsync bit flags:
-#    >f+++++++++ some/dir/new-file.txt
-#    .f....og..x some/dir/existing-file-with-changed-owner-and-group.txt
-#    .f........x some/dir/existing-file-with-changed-unnamed-attribute.txt
-#    >f...pog..x some/dir/existing-file-with-changed-permissions.txt
-#    >f..t.og..x some/dir/existing-file-with-changed-time.txt
-#    >f.s..og..x some/dir/existing-file-with-changed-size.txt
-#    >f.st.og..x some/dir/existing-file-with-changed-size-and-time-stamp.txt 
-#    cd+++++++++ some/dir/new-directory/
-#    .d....og... some/dir/existing-directory-with-changed-owner-and-group/
-#    .d..t.og... some/dir/existing-directory-with-different-time-stamp/
-#    ------------------------------------------------------
-#    Explaination of each bit in the output:
+#    Explanation of each bit position and value in rsync's output:
 #    YXcstpoguax  path/to/file
 #    |||||||||||
-#    ||||||||||`- x: The extended attribute information changed
-#    |||||||||`-- a: The ACL information changed
-#    ||||||||`--- u: The u slot is reserved for future use
-#    |||||||`---- g: Group is different
-#    ||||||`----- o: Owner is different
-#    |||||`------ p: Permission are different
-#    ||||`------- t: Modification time is different
-#    |||`-------- s: Size is different
-#    ||`--------- c: Different checksum (for regular files), or
+#    ||||||||||╰- x: The extended attribute information changed
+#    |||||||||╰-- a: The ACL information changed
+#    ||||||||╰--- u: The u slot is reserved for future use
+#    |||||||╰---- g: Group is different
+#    ||||||╰----- o: Owner is different
+#    |||||╰------ p: Permission are different
+#    ||||╰------- t: Modification time is different
+#    |||╰-------- s: Size is different
+#    ||╰--------- c: Different checksum (for regular files), or
 #    ||              changed value (for symlinks, devices, and special files)
-#    |`---------- the file type:
+#    |╰---------- the file type:
 #    |            f: for a file,
 #    |            d: for a directory,
 #    |            L: for a symlink,
 #    |            D: for a device,
 #    |            S: for a special file (e.g. named sockets and fifos)
-#    `----------- the type of update being done::
+#    ╰----------- the type of update being done:
 #                 <: file is being transferred to the remote host (sent)
 #                 >: file is being transferred to the local host (received)
 #                 c: local change/creation for the item, such as:
@@ -435,6 +429,18 @@ fi
 #                    attributes that are being modified)
 #                 *: means that the rest of the itemized-output area contains
 #                    a message (e.g. "deleting")
+#    ------------------------------------------------------
+#    For reference, some example output from rsync for various scenarios:
+#    >f+++++++++ some/dir/new-file.txt
+#    .f....og..x some/dir/existing-file-with-changed-owner-and-group.txt
+#    .f........x some/dir/existing-file-with-changed-unnamed-attribute.txt
+#    >f...p....x some/dir/existing-file-with-changed-permissions.txt
+#    >f..t..g..x some/dir/existing-file-with-changed-time-and-group.txt
+#    >f.s......x some/dir/existing-file-with-changed-size.txt
+#    >f.st.....x some/dir/existing-file-with-changed-size-and-time-stamp.txt 
+#    cd+++++++++ some/dir/new-directory/
+#    .d....og... some/dir/existing-directory-with-changed-owner-and-group/
+#    .d..t...... some/dir/existing-directory-with-different-time-stamp/
 #    ------------------------------------------------------
 # 5. To focus only on the changes that are substantive for each context (new
 #    file, duplicate file, etc), the output produced by rsync --itemize-changes
@@ -462,26 +468,28 @@ printf -- "==================\nRaw List:\n%s\n__________________\n\n" "${full_fi
 #####################################################################
 ##### PREPARE CHANGE LIST ###########################################
 
-# loop over each line in DIRSTOPRESERVEFILE and remove it from full_file_list
-# as these are false positives, especially if we are applying ownership or 
-# permission changes to the destination directories
-while read -r line || [[ -n "${line}" ]]; do  # allows for last line with no newline
-    # skip lines that are delimited as a comment (with #) or are blank
-    if ! [[ "${line}" =~ ^[:space:]*# || "${line}" =~ ^[:space:]*$ ]]; then
-        # using some bash fu, add a trailing slash if one is not already present
-        line="${line}$(  printf \\$( printf '%03o' $(( $(printf '%d' "'${line:(-1)}") == 47 ? 0 : 47 )) )  )"
-
-        # save this info as it is needed later during stale directory cleanup
-        dirs_to_preserve="${dirs_to_preserve}${line}"$'\n'
-
-        # make the path local; remove $SOURCEPATH from the beginning of $line
-        # via the substring removal capacities of bash's parameter expansion
-        local_path="${line#$SOURCEPATH}"
+if [ -n "${DIRSTOPRESERVEFILE}" ]; then 
+    # loop over each line in DIRSTOPRESERVEFILE and remove it from 
+    # full_file_list as these are false positives, especially if we are
+    # applying ownership or permission changes to the destination directories
+    while read -r line || [[ -n "${line}" ]]; do  # allows for last line with no newline
+        # skip lines that are delimited as a comment (with #) or are blank
+        if ! [[ "${line}" =~ ^[:space:]*# || "${line}" =~ ^[:space:]*$ ]]; then
+            # using some bash fu, add a trailing slash if one is not already present
+            line="${line}$(  printf \\$( printf '%03o' $(( $(printf '%d' "'${line:(-1)}") == 47 ? 0 : 47 )) )  )"
     
-        # search for a match to $line in $full_file_list. if found, remove the matching line
-        full_file_list=$(sed -r "\|^........... \.?${local_path}$|d" <<< "${full_file_list}")
-    fi
-done <"${DIRSTOPRESERVEFILE}"
+            # save this info as it is needed later during stale directory cleanup
+            dirs_to_preserve="${dirs_to_preserve}${line}"$'\n'
+    
+            # make the path local; remove $SOURCEPATH from the beginning of $line
+            # via the substring removal capacities of bash's parameter expansion
+            local_path="${line#$SOURCEPATH}"
+        
+            # search for a match to $line in $full_file_list. if found, remove the matching line
+            full_file_list=$(sed -r "\|^........... \.?${local_path}$|d" <<< "${full_file_list}")
+        fi
+    done < "${DIRSTOPRESERVEFILE}"
+fi
 
 
 # extra check to make sure ./ is removed as the previous loop will only have
@@ -641,7 +649,6 @@ if [ "${full_list_count}" -gt "0" ]; then
         printf -- "\nFile Collisions:\n%s\n\n" "${offending_files}" >&4
 
         offending_files_actual_count="0"    # nothing yet
-        offending_files_actual=""    # nothing yet
         
         IFS=" "    # set word break on space for splitting
 
@@ -665,7 +672,6 @@ if [ "${full_list_count}" -gt "0" ]; then
                 # level 2 verbose message, sent to file descriptor 4
                 printf -- "File (%s) was moved from source to destination directory with deconflicted name (%s).\n" "${SOURCEPATH}${path}" "${SOURCEPATH}${unique_path}" >&4
 
-                offending_files_actual="${offending_files_actual}${path}"$'\n'
                 let offending_files_actual_count+="1" 
 
                 let change_count+="1"
@@ -683,9 +689,6 @@ if [ "${full_list_count}" -gt "0" ]; then
             unset cmd_ret
         done <<< "${offending_files}"
         unset IFS
-
-        # level 2 verbose message, sent to file descriptor 4
-        printf -- "\nFile collisions were processed via renaming for the following:\n%s\n" "${offending_files_actual}" >&4
         
         # level 1 verbose message, sent to file descriptor 3
         printf -- "\n  Done processing (%s) file collisions by renaming offending files.\n" "${offending_files_actual_count}" >&3
@@ -888,65 +891,70 @@ printf -- "\n  Done processing (%s) stale directories.\n" "${dir_cleanup_count}"
 
 # loop over each line in OWNERSHIPFILE and enforce the ownership supplied
 if [ "${ownership_changes}" -gt "0" ]; then
-    # level 1 verbose message, sent to file descriptor 3
-    printf -- "\n==================\nChanges require us to validate ownership.\n\n" >&3
-
-    while read -r line || [[ -n "${line}" ]]; do  # allows for last line with no newline
-        # skip lines that are delimited as a comment (with #) or are blank
-        if ! [[ "${line}" =~ ^[:space:]*# || "${line}" =~ ^[:space:]*$ ]]; then
-            
-            # split the line on tab to extract ownership info from dir path
-            while read -r a b;do perm="$a"; path="$b"; done <<<"$line"
-
-            # if both the owner:group ($perm) and the path ($path) are supplied
-            if [ -n "${perm}" ] && [ -n "${path}" ]; then
-
-                # check if the path supplied is really a directory
-                if [ -d "${path}" ]; then
-                    # validate that any symlinks in the paths resolved
-                    realpath="$(readlink -f "${path}")"
-                    realdest="$(readlink -f "${DESTINATIONPATH}")"
-
-                    # make sure that the $line is local to destination path
-                    if [ "$(echo "${realpath}" | grep -E -c "^${realdest}")" = "1" ]; then
-                    
-                        # As required by chown, make sure the path does not end
-                        # in a slash. sed is used to make sure that multiple 
-                        # slashes at the end are removed if they exist.
-                        realpath="$(echo "${realpath}" | sed -r 's/\/+$//')"
+    if [ -n "${OWNERSHIPFILE}" ]; then 
+        # level 1 verbose message, sent to file descriptor 3
+        printf -- "\n==================\nChanges require us to validate ownership.\n\n" >&3
+    
+        while read -r line || [[ -n "${line}" ]]; do  # allows for last line with no newline
+            # skip lines that are delimited as a comment (with #) or are blank
+            if ! [[ "${line}" =~ ^[:space:]*# || "${line}" =~ ^[:space:]*$ ]]; then
+                
+                # split the line on tab to extract ownership info from dir path
+                while read -r a b;do perm="$a"; path="$b"; done <<<"$line"
+    
+                # if both the owner:group ($perm) and the path ($path) are supplied
+                if [ -n "${perm}" ] && [ -n "${path}" ]; then
+    
+                    # check if the path supplied is really a directory
+                    if [ -d "${path}" ]; then
+                        # validate that any symlinks in the paths resolved
+                        realpath="$(readlink -f "${path}")"
+                        realdest="$(readlink -f "${DESTINATIONPATH}")"
+    
+                        # make sure that the $line is local to destination path
+                        if [ "$(echo "${realpath}" | grep -E -c "^${realdest}")" = "1" ]; then
                         
-                        # no-dereference is used to keep chown from following links
-
-                        # via some bash fu, capture stdout, sterr and return code for rsync
-                        # ⬇ start of out-err-rtn capture fu
-                        eval "$({ cmd_err=$({ cmd_out="$( \
-                            chown --recursive --preserve-root --silent --no-dereference "${perm}" "${realpath}" \
-                          )"; cmd_ret=$?; } 2>&1; declare -p cmd_out cmd_ret >&2); declare -p cmd_err; } 2>&1)"
-                        # ⬆ close of out-err-rtn capture fu
-                        
-                        if [ "${cmd_ret}" -eq "0" ]; then
-                            # level 2 verbose message, sent to file descriptor 4
-                            printf -- "Directory path (%s) had ownsership (%s) applied.\n" "${path}" "${perm}" >&4
+                            # As required by chown, make sure the path does not end
+                            # in a slash. sed is used to make sure that multiple 
+                            # slashes at the end are removed if they exist.
+                            realpath="$(echo "${realpath}" | sed -r 's/\/+$//')"
+                            
+                            # no-dereference is used to keep chown from following links
+    
+                            # via some bash fu, capture stdout, sterr and return code for rsync
+                            # ⬇ start of out-err-rtn capture fu
+                            eval "$({ cmd_err=$({ cmd_out="$( \
+                                chown --recursive --preserve-root --silent --no-dereference "${perm}" "${realpath}" \
+                              )"; cmd_ret=$?; } 2>&1; declare -p cmd_out cmd_ret >&2); declare -p cmd_err; } 2>&1)"
+                            # ⬆ close of out-err-rtn capture fu
+                            
+                            if [ "${cmd_ret}" -eq "0" ]; then
+                                # level 2 verbose message, sent to file descriptor 4
+                                printf -- "Directory path (%s) had ownsership (%s) applied.\n" "${path}" "${perm}" >&4
+                            else
+                                # level 2 verbose message, sent to file descriptor 4
+                                printf -- "Warning: attempt to set directory path (%s) with ownership (%s) failed. [%s : %s]\n" "${path}" "${perm}" "${cmd_ret}" "${cmd_err}" >&4
+                            fi  
                         else
                             # level 2 verbose message, sent to file descriptor 4
-                            printf -- "Warning: attempt to set directory path (%s) with ownership (%s) failed. [%s : %s]\n" "${path}" "${perm}" "${cmd_ret}" "${cmd_err}" >&4
-                        fi  
+                            printf -- "Directory (%s) is not local to the destination directory; ignoring it.\n" "${path}" >&4
+                        fi
                     else
                         # level 2 verbose message, sent to file descriptor 4
-                        printf -- "Directory (%s) is not local to the destination directory; ignoring it.\n" "${path}" >&4
+                        printf -- "Directory (%s) listed in ownership file is not a directory; ignoring it.\n" "${path}" >&4
                     fi
                 else
                     # level 2 verbose message, sent to file descriptor 4
-                    printf -- "Directory (%s) listed in ownership file is not a directory; ignoring it.\n" "${path}" >&4
+                    printf -- "The line (%s) in ownership file does not follow the required pattern; ignoring it.\n" "${line}" >&4
                 fi
-            else
-                # level 2 verbose message, sent to file descriptor 4
-                printf -- "The line (%s) in ownership file does not follow the required pattern; ignoring it.\n" "${line}" >&4
+    
             fi
-
-        fi
-    done <"${OWNERSHIPFILE}"
-    printf -- '\n==================\nMade (%s) total changes. ' "${change_count}"
+        done <"${OWNERSHIPFILE}"
+        printf -- '\n==================\nMade (%s) total changes. ' "${change_count}"
+    else
+        # level 2 verbose message, sent to file descriptor 4
+        printf -- '\n==================\nNo ownership file was supplied. Skipping ownership enforcement.\n' >&4
+    fi
 else
     printf -- '\nNo (%s) changes. ' "${change_count}"
 fi
