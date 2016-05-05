@@ -81,14 +81,15 @@ SOFTWARE.
 
 
 ##Usage
-The script accepts arugments via the following flags:
+The script accepts arguments via the following flags:
     
 > **`-s=` or `--source=`**  
-REQUIRED. Source directory path. Should be a path to the source directory to inspect for new file system changes that will be moved to the target directory.
+REQUIRED. Source directory path. Should be a path to the source directory to inspect for new file system changes that will be moved to the target directory. The argument passed can be a symbolic link to the intended source directory.
  	
 > **`-d=` or `--destination=`**  
-REQUIRED. Destination directory path. Should be a path to the target directory to which source directory additions will be added.
-    	
+REQUIRED. Destination directory path. Should be a path to the target directory to which source directory additions will be added. The argument passed can be a symbolic link to the intended destination directory.
+
+   
 > **`-p=` or `--preserve=`**  
 Directories to preserve config file. Parameter should be the path to file that contains directives about source subdirectories to perserve from the stale directory clean up process.
 
@@ -119,12 +120,12 @@ To run the script only two parameters are required:
 
 An example of how the script might be typically used:
 
-	./movestough.sh \
+	/my/scripts/movestough.sh \
 		-s=/incoming/pictures/ \
-		-d=/media/pictures/to be processed/ \
-		-p=~/movestough-scaffolding.conf \
-		-o=~/movestough-ownership.conf \
-		-l=~/movestough.log \
+		-d="/media/pictures/to be processed/" \
+		-p=/my/scripts/movestough-scaffolding.conf \
+		-o=/my/scripts/movestough-ownership.conf \
+		-l=/var/log/movestough.log \
 		-v=2 \
 		-u=1
 
@@ -134,16 +135,16 @@ First, if you are unfamilar with `cron`, [read the cron man page](http://linux.d
 This allows the script to be executed often but keeps the system from having
 simultaneous copies of the script running. Not only is this resource (CPU, RAM) friendly, this eliminates race conditions and other nasty unintendedside effects.
 
-With that said, a suggest crontab entry to run the script every
-3 minutes would look something like:
+A suggested crontab entry to run the script every 3 minutes with same configuration as the CLI example above would look something like:
 
-	*/3 * * * * /usr/bin/flock -w 0 -n /Dropbox/Scripts/movestough-pictures.lock /Dropbox/Scripts/movestough.sh  -s=/Dropbox/Move\ to\ ReadyNAS/Pictures/ -d=/media/Pictures/~dropbox\ -\ to\ be\ sorted/ -p=/Dropbox/Scripts/movestough-pictures-scaffolding.conf -o=/Dropbox/Scripts/movestough-pictures-permissions.conf -l=/Dropbox/Scripts/movestough-pictures.log*/2 * * * * flock -w 0 -n /some/path/script.lock /some/path/script.sh ...
 
-You will need to specify additional required flags like -s -d and maybe even consider some optional but common flags, like -s or -p for the example above.
+	*/3 * * * * /usr/bin/flock -w 0 -n /var/lock/movestough.lock /my/scripts/movestough.sh -s=/incoming/pictures/ -d="/media/pictures/to be processed/" -p=/my/scripts/movestough-scaffolding.conf -o=/my/scripts/movestough-ownership.conf -l=/var/log/movestough.log -u=1
+	
+It is unfortunate that crontab entries have no means of commenting or multiline configuration. To be accurate, the above entry is displayed as a single line as it would need to be in your crontab. If you want to understand the details of the example crontab entry, it is recommended that you copy the contents above to a text editor where you can enable line wrapping or temporarily insert white space to better visualize the contents.
 
-If you expect to use the script for an extended period of time, consider using `logrotate` to manage your logs so they grow indefinitely. If you are unfamiliar with `logrotate`, [read the logrotate man page](http://linux.die.net/man/8/logrotate). An config for `logrotate` might look something like: 
+If you expect to use the script in an unattended manor for an extended period of time, consider using `logrotate` to manage your logs so they do not grow indefinitely. If you are unfamiliar with `logrotate`, [read the logrotate man page](http://linux.die.net/man/8/logrotate). An example config for `logrotate` might look something like: 
 
-	/Dropbox/Scripts/movestough*.log {
+	/var/log/movestough*.log {
         size 10M
         weekly
         rotate 12
@@ -157,24 +158,28 @@ If you expect to use the script for an extended period of time, consider using `
 
 ##History
 **changelog:**  
- 2016-04-27 fixed error where `--ownership` was assumed active even if it was not specified
- 2016-04-27 cleaned up verbose cli output for file collisions
- 2016-04-26 fixed error where `--preserve` was assumed active even if it was not specified
- 2016-05-25 corrected verbose output messages for 
- 2016-04-24 improved make\_filename\_unique allowing a style number to be specified via a `-unique-style=` (or `-u=` for short) flag  
+
+ 2016-05-04 no change; verified that source or target directory arguments can be a symbolic link to a directory and the script functions properly on fronts  
+ 2016-05-04 no change; verified that `if [ -d "/dev/null" ]` fails which keeps it from erroneously being supplied as the source or target directory  
+ 2016-04-28 added checks to `make\_filename\_unique` function to account for file names that don't have a period or an extension  
+ 2016-04-28 fix display of verbose level number on interactive run  
+ 2016-04-27 fixed error where `--ownership` was assumed active even if it was not specified  
+ 2016-04-26 fixed error where `--preserve` was assumed active even if it was not specified  
+ 2016-04-25 corrected verbose output messages for file collision processing
+ 2016-04-24 improved `make\_filename\_unique` function allowing a style number to be specified via a `-unique-style=` (or `-u=` for short) flag  
   2016-04-23 just in case it was not specified in a via a `--preserve=` (or `-p` for short) config file, the source directory is preserved during the stale directory clean up process  
  2016-04-23 updated docs and comments to prepare for github  
- 2016-04-20 added basic exit codes
+ 2016-04-20 added basic exit codes  
  2016-04-18 changed verbose output from notify function to use file descriptors (allows safe handling of all chars in output)  
- 2016-04-17 fixed use of vars in printf statements; example: printf "Hello, %s\n" "$NAME"  
- 2016-04-16 standardized log file output mimicking rsync bit flag output  
- 2015-04-15 added cmd\_out, cmd\_err, cmd\_rtn fu to each rsync, mv, rmdir  
+ 2016-04-17 fixed use of vars in `printf` statements; example: `printf "Hello, %s\n" "$NAME"`  
+ 2016-04-16 standardized log file output mimicking `rsync` bit flag output  
+ 2015-04-15 added `cmd\_out`, `cmd\_err`, `cmd\_rtn` fu to each `rsync`, `mv`, `rmdir` command  
  2016-04-10 fixed nasty bug in stale dir check introduced by file checks  
  2016-04-09 optimized flag checks and added file exist/write checks  
- 2016-04-07 fixed egregious bug with rsync use (missing --dry-run)
+ 2016-04-07 fixed egregious bug with rsync use (missing `--dry-run`)
  2016-04-05 add destination file ownership via a conf file  
  2016-04-05 add verbose level2 checking for errors of file mv commands  
- 2016-04-04 add handling of # comments in the input config files  
+ 2016-04-04 add handling of commented lines, as delimited by the # symbol, in the input config files  
  2016-04-03 add levels of verboseness to stdout  
  2016-04-02 standardize verbose output to stdout in function  
  2016-03-30 add args for source and destination directories  
@@ -184,18 +189,20 @@ If you expect to use the script for an extended period of time, consider using `
 
 **backlog in no particular order:**  
 
-- add checks to file name deconflicting function for handling files that don't have an period or extension
-- fix display of verbose level # on interactive run
+
+- verify what happens if source and target are the same  
 - create a help function triggered by checking and `--help` or `-?` 
 - implement check on success of rsync when creating the checksum_match
 - add some checking for dependencies and minimum versions of bash, rsync, etc.; once discovered, this should also be added to the documentation as well in the dependencies section of the README
+- add the ability for the script to be run with prompts for required parameters 
 - add the ability to daemonize the script
 - implement an internal list of files or directory changes and narrow the use of chown to only those
 - consider the use of `trap` to ensure consistent state when forced to exit
 - clean up out and make it more uniform between versions of verboseness
-- for efficiency, the structure changes loop should ignore owner and group differences because we very well might be enforcing the variance; this manifest itself when directories are not in the scaffolding to keep but have yet to be marked as stale
+- for efficiency, the structure changes loop should ignore owner and group differences because we very well might be enforcing the variance; this manifests itself when directories are not in the scaffolding to keep but have yet to be marked as stale
 - consider use of echo `-n` or `<<<` to suppress newlines or eliminate piped sed
-- verify proper use of [[ ]] or [ ] in if statements
+- verify proper use of `[[ ]]` as opposed to `[ ]` in if statements
+- consider convering `[[ ]]` to `(( ))` when the comparison is numerical (as opposed to string comparison)
 - periodically test and check notices from http://www.shellcheck.net/
 - implement check on success of `rsync` in hash check
 - add different deconflicting options, like keeping file extension in tact
