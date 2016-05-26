@@ -36,7 +36,7 @@ For those more familiar with linux cli handiwork, think of this script as the be
 > If I have seen further than others, it is by standing upon the shoulders of giants.  
 > - Isaac Newton
 		
-There are many nameless people who have unselfishly contributed their time to help to share their enthusiasm for and knowledge about solving problems via software development. There are not enough words to properly thank each. There are also some notably brilliant minds who had creative solutions to challenges that were faced in wrangling bash into doing what was needed in this script. References to their contributions are included below for your further reference and enjoyment:  
+There are many nameless people who have unselfishly contributed their time to help share their enthusiasm for and knowledge about solving problems via software development. There are not enough words to properly thank each. There are also some notably brilliant minds who had creative solutions to challenges that were faced in wrangling bash into doing what was needed in this script. References to their contributions are included below for your further reference and enjoyment:  
 
 - [handling of various levels of verbose output via file descriptors](http://stackoverflow.com/a/20942015/171475)  
 - [capturing stderr, stdout, return code from a command executed in a subshell](http://stackoverflow.com/a/26827443/171475)
@@ -67,7 +67,7 @@ SOFTWARE.
 4. Manage any possible file collisions by making offending source file names unique before moving them to the target directory. The the collision-free change list is fed to mv to complete the move from source to destination.
 5. For files that appear exactly the same (size, attributes and change date) in the source and destination, check each via hash against the matching destination file. If the hashes match, there is no need to mv the file, so the source file is deleted. Else, move the file via unique file name. Uniqueness style can be specified via the `--unique-style` (or `-u` for short).
 6. If changes were made in the destination directory, check the supplied ownership config file and reinforce ownership as indicated.
-7. Look for stale, empty directories in the source directory and remove them. Staleness is determined by the change date as compared to the number of minutes passed into the flag `--minutes-until-stale` (or `-ms` for short). If no flag is set, staleness defaults to 15 mins.
+7. Look for stale, empty directories in the source directory and remove them. Staleness is determined by the change date as compared to the number of minutes passed into the flag `--minutes-until-stale` (or `-ms` for short). If no flag value is set, staleness defaults to 15 mins.
    
 **Dependencies**  
 
@@ -228,3 +228,4 @@ If you expect to use the script in an unattended manor for an extended period of
 
 
 
+	
