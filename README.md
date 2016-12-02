@@ -5,31 +5,46 @@
 
 
 ## Intended Use  
-The primary function of this script is to move files from a source directory to a target directory, on the same filesystem, via fail-safe handling.
+The principal use of this script is to move files from a source directory to a target directory, on the same filesystem, via fail-safe handling.
+
+For more background information, usage suggestions and the latest version of this script, please visit: https://github.com/jmmitchell/movestough
+
 
 **Strengths over alternative options:**  
-This script is intended to provide fine-grained handling when moving filesystem contents as compared to other alternatives, like rsync or mv alone. While there may be faster or less complicated ways to move files, this script has been specifically crafted to err on the side of data preservation and tracking every create/update/delete action in a timestamped log. For instance, this means that files should never be overwritten; sameness is verified by checksum of the file; directories that are marked for deletion will fail to be deleted if they, for unforeseen reasons, are not empty.
+For those more familiar with linux cli handiwork, you can think of this script as the best of `rsyc`, `find`, `mv`, `mkdir` & `rmdir` rolled into one.
 
-For those more familiar with linux cli handiwork, think of this script as the best of rsync, find, mv, mkdir and rmdir rolled into one.
+This script excels in comparison to using `rsync` or `mv` alone in that it provides finer-grained handling of the move process.
+
+While there may be faster or less complicted ways to simply move some files, this script has been crafted to err on the side of data preservation and to produce an audit trail for all actions taken.
+
+To expand upon that, a few of the distinctive features are:
+
+(1) Every create/update/delete action can be logged in a timestamped log. The `mv` command does not do this and `rsync`, without some serious canjoling, omits key actions from it's output and therefore leaves you with no record.
+
+(2) The directory structure on the source filesystem can be cleaned up once they are empty. Specifically, after moving the source files to their target, if there empty directories on the source filesystem they can be deleted after a specified delay or they can be selectively preserved. The ability to clean up the empty source subdirectories after moving the files conatined within is a feature that is sorely missing from `rsync`.
+
+(4) Directories that are targeted for deletion as part of the clean up process will not be deleted if they, for unforseen reasons, are not empty when we attempt to deleted them. This may seem obvious but is a subtle use-case that can easily manifest itself if this script is used on a computer where files are being added by other local processes (e.g. dropbox) or has a shared filesystem where network users may be actively creating new files in the same directory structure in which we are working.
+
+(3) Any attempt to move a file is done with the greatest care for data preservation. As an example, a file that appears to be a duplicate, by file name conflict, should be examined closely before any potentially destructive action is taken. Files that are suspected to be duplicates are validated by a hash function. If the source file (file to be moved) is found to be a byte-for-byte duplicate of the existing target (i.e. destination) file, the source file is not copied and be safely disregarded. If on the other hand, the source file is found to have the same name as the existing target file but contains different data it will be moved but will be given a unique filename so as to preserved the data and allow a person to manually inspect both files after the fact and to make a judgement call on what to keep.
 
 
-**Key features:**  
+**Feature summary:**  
 
-- directories cleaned up from source directory (rsync does not do this)
-- via optional config file, source subdirectories can be selectively preserved
+- empty directories cleaned up from source directory (`rsync` does not do this)
+- via optional config, source subdirectories can be selectively preserved
 - consistent timestamped logging of all create/update/delete actions
-- logging of all items removed from source (not found in rsync)
-- warning messages in logs capture error information
-- warning messages in logs include stderr and return code of failed command
-- two levels of verbose message when run interactively
+- log all items removed from the source directory (`rsync` does not do this)
+- logs level can specified to record increasing levels of detail
+- warging messages in logs include stderr and return code of failed command
+- two levels of verbose output are available when when run interactively
 - target directory structure will be created, if needed
-- via optional config file, ownership rules can be specified for items moved to the target directory
+- via optional config file, new ownership rules can be specified for items moved to the target directory
 - each potential file collisions (files with the same name & date) are verified via checksum of both source and target files
-- verified file collisions are moved to the target via deconflicted filename as opposed to rsync delta copy that might replicate a partial written file
-- conflicting files are deconflicted by adding a unique string; the location of the string can be specified by a parameter
-- exact duplicate files, verified via checksum, are not replicated and, for simplicity's sake, are removed from the source directory
-- if source and target on the same filesystem, files are "moved" super fast via meta data update (directory entries) rather than file contents being read and rewritten to disk
-- file-level atomic move so that there should never be a partially moved file
+- verified file collisions are moved to the target via deconflicted filename as opposed to `rsync` delta copy that might replicate a partial written file
+- exact duplicate files, verified via checksum, are not replicated
+- if source and target are on the same filesystem, files are "moved" super fast via metadata update (directory entries) rather than reading and rewriting file contents
+- file-level atomic moves ensuring there is never a partially moved file
+
 
 **Shout-outs:**  
 
@@ -41,8 +56,10 @@ There are many nameless people who have unselfishly contributed their time to he
 - [handling of various levels of verbose output via file descriptors](http://stackoverflow.com/a/20942015/171475)  
 - [capturing stderr, stdout, return code from a command executed in a subshell](http://stackoverflow.com/a/26827443/171475)
 
+
 **WARNING**  
 It should be recognized that while this script makes every attempt to fail safely, there are most probably edge cases that are not accounted for, so proceed with caution, question everything and, if you find bugs please contribute back with a pull request. You have been warned.
+
 
 **LICENSE**  
 This software is licensed using the MIT License
@@ -185,6 +202,7 @@ If you expect to use the script in an unattended manor for an extended period of
  2016-03-30 add args for source and destination directories  
  2016-03-29 allow directories to be preserved in source via conf file  
  2016-03-27 rewrite to use rsync to only list changes (fixes overwrites)  
+ 2016-12-02 updated README.md and comments to clarify intended uses and distictive features of this script over traditional alternative like using `rsync` or `mv` alone  
 
 
 **backlog in no particular order:**  

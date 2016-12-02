@@ -38,48 +38,82 @@
 # this script, please visit: https://github.com/jmmitchell/movestough
 #
 #
-# What it not intended for:
-# This software not intended for opying files to remote file systems. Rsync, 
-# Unison, SyncThing or a host of other options will serve you well. In
-# addition, this is software really not intended to be backup software, though
-# it certainly could be part of your overall backup plan.
+# What it is not intended for:
+# This software not intended for copying files to remote a filesystem. If that
+# is what you are needing, then Rsync, Unison, SyncThing or a host of other
+# options might be a place to start. In addition, this is software is really
+# not intended to be backup software by itself, though it certainly could be
+# part of an overall backup plan.
 #
 # 
 # Strengths over alternative options:
-# This script is intended to provide finer-grained handling of file moving of
-# local filesystem contents over other alternatives, like rsync or mv alone.
-# While there may be faster or less complicted ways to move files, this script
-# has been crafted to err on the side of data preservation and tracking every
-# create/update/delete action in a timestamped log. This means that files are
-# should never be overwritten; directories that are marked for deletion will
-# fail to be deleted if they, for unforseen reasons, are not empty; ...
+# For those more familiar with linux cli handiwork, you can think of this
+# script as the best of rsyc, find, mv, mkdir & rmdir rolled into one.
+#
+# This script excels in comparison to using rsync or mv alone in that it 
+# provides finer-grained handling of the move process.
+#
+# While there may be faster or less complicted ways to simply move some files,
+# this script has been crafted to err on the side of data preservation and to
+# produce an audit trail for all actions taken.
 # 
-# For those more familiar with linux cli handiwork, think of this script as
-# the best of rsyc, find, mv, mkdir & rmdir rolled into one.
+# To expand upon that, a few of the distinctive features are:
+#
+# (1) Every create/update/delete action can be logged in a timestamped log. The
+# mv command does not do this and rsync, without some serious canjoling, omits
+# key actions from it's output and therefore leaves you with no record.
+#
+# (2) The directory structure on the source filesystem can be cleaned up once
+# they are empty. Specifically, after moving the source files to their target,
+# if there empty directories on the source filesystem they can be deleted after
+# a specified delay or they can be selectively preserved. The ability to clean
+# up the empty source subdirectories after moving the files conatined within
+# is a feature that is sorely missing from rsync.
+#
+# (4) Directories that are targeted for deletion as part of the clean up
+# process will not be deleted if they, for unforseen reasons, are not empty
+# when we attempt to deleted them. This may seem obvious but is a subtle 
+# use-case that can easily manifest itself if this script is used on a computer
+# where files are being added by other local processes (e.g. dropbox) or has a
+# shared filesystem where network users may be actively creating new files in
+# the same directory structure in which we are working.
+#
+# (3) Any attempt to move a file is done with the greatest care for data
+# preservation. As an example, a file that appears to be a duplicate, by file
+# name conflict, should be examined closely before any potentially destructive
+# action is taken. Files that are suspected to be duplicates are validated by a
+# hash function. If the source file (file to be moved) is found to be a 
+# byte-for-byte duplicate of the existing target (i.e. destination) file, the
+# source file is not copied and be safely disregarded. If on the other hand,
+# the source file is found to have the same name as the existing target file
+# but contains different data it will be moved but will be given a unique
+# filename so as to preserved the data and allow a person to manually inspect
+# both files after the fact and to make a judgement call on what to keep.
 #
 #
-# Key features:
-# - directories cleaned up from source directory (rsync does not do this)
-# - via optional config file, source subdirs can be selectively preserved
+# Feature summary:
+# - empty directories cleaned up from source directory (rsync does not do this)
+# - via optional config, source subdirectories can be selectively preserved
 # - consistent timestamped logging of all create/update/delete actions
-# - logging of all items removed from source (not found in rsync)
-# - warning messages in logs capture error information
+# - log all items removed from the source directory (rsync does not do this)
+# - logs level can specified to record increasing levels of detail
 # - warging messages in logs include stderr and return code of failed command
-# - two levels of verbose message when run interactively
+# - two levels of verbose output are available when when run interactively
 # - target directory structure will be created, if needed
-# - via optional config file, ownership rules can be specified for items 
+# - via optional config file, new ownership rules can be specified for items 
 #   moved to the target directory
 # - each potential file collisions (files with the same name & date) are
 #   verified via checksum of both source and target files
 # - verified file collisions are moved to the target via deconflicted filename
 #   as opposed to rsync delta copy that might replicate a partial written file
 # - exact duplicate files, verified via checksum, are not replicated
-# - if source and target on the same filesystem, files are "moved" super fast
-#   via meta date update (directory entries) rather than file contents
-# - file-level atomic move so that there should never be a partially moved file
+# - if source and target are on the same filesystem, files are "moved" super
+#   fast via metadata update (directory entries) rather than reading and
+#   rewriting file contents
+# - file-level atomic moves ensuring there is never a partially moved file
 #
 #
-# The details: 
+# High level steps taken by the script in performing its task:
 # 1. Using rsync, look in the source directory for files, directories and links
 #    that need to be moved to the destination directory.
 # 2. Using rsync, replicate the identified structural items (folders & links)
@@ -88,34 +122,37 @@
 #    exception to this is subdirectories. These are handled last.
 # 3. For completely new files found in the source directory, move them via the
 #    mv command.
-# 4. Manage any possible file collisions by making offending source file names
-#    unique before moving them to the target directory. The the collision-free
-#    change list is fed to mv to complete the move from source to destination.
-# 5. For files that appear exactly the same (size, attributes and change date)
+# 4. For files that appear exactly the same (size, attributes and change date)
 #    in the source and destination, check each via hash against the matching
-#    destination file. If the hashes match, there is no need to mv the file, so
-#    the source file is deleted. Else, move the file via unique file name.
+#    destination file. If the hashes are the same, there is no need to mv the
+#    file, so the source file is deleted.
+# 5. Manage any possible file collisions by making offending source file names
+#    unique while moving them to the target directory. The collision-free
+#    change list is then fed to mv to complete the move from source to 
+#    destination.
 # 6. If changes were made in the destination directory, check the supplied
-#    ownership config file and reinforce ownership as indicated.
+#    ownership config file and enforce ownership as indicated.
 # 7. Look for stale, empty directories in the source directory and remove them.
 #    Staleness is determined by the change date as compared to the number of
 #    minutes passed into the flag --minutes-until-stale (or -ms for short). If
 #    no flag is set, staleness defaults to 15 mins.
+#
 #
 #                              *** IMPORTANT ***
 # It is important to use flock when running this script from a crontab. This
 # allows the script to be executed often but keeps the system from having
 # simultaneous copies of the script running. Not only is this resource (CPU, 
 # RAM) friendly, this eliminates race conditions and other nasty unintended
-# side effects. For more information, see the readme for the project on github:
-# https://github.com/jmmitchell
+# side effects. For more information, see the readme on github:
+# https://github.com/jmmitchell/movestough/blob/master/README.md
 #                              *****************
 #
+#
 #                              **** WARNING ****
-# It should be recognized that while this script makes every attempt to fail
-# safely, there are most probably edge cases that are not accounted for, so
+# It should be recognized that, while this script makes every attempt to fail
+# safely, there are most probably edge cases that are not accounted for so
 # proceed with caution, question everything and, if you find bugs please
-# contribute back with a pull request. You have been warned.
+# contribute back with a pull request on github. You have been warned.
 #                              *****************
 #
 ###############################################################################
@@ -126,7 +163,7 @@
 #
 
 function make_filename_unique {
-    # were were passed anything
+    # where we passed anything?
     if [ -n "$1" ]; then
         local unique_string="deconflicted-$(date +"%Y-%m-%d-%H-%M-%S-%N")"
         # get the file name part of the filepath
